@@ -11,12 +11,12 @@ use alcamo\exception\{
 /**
  * @brief Sanitize data given as key-value pairs
  *
- * Typically the sanitization rules will be stored in the class constant @ref
+ * Typically the sanitization rules are stored in the class constant @ref
  * RULES in a derived class. These map keys to *rule arrays*. The sanitize()
- * method will then apply the rules to each data item.
+ * method will then apply to each data item the rules assigned to its key.
  *
  * Each element in a rule array is either a rule name as a string value (with
- * an implicit numeric key) or a map of a rule name to a rule paremeter. The
+ * an implicit numeric key) or a map of a rule name to a rule parameter. The
  * latter may be of any type - number, string, array - depending on the rule.
  *
  * @note In each rule array:
@@ -33,13 +33,11 @@ use alcamo\exception\{
  * ensures that the sanitizer will recognize when a required data element was
  * removed because it had an illegal value.
  *
- * All built-in rules convert empty strings to `null`.
- *
  * For example:
- * - ``[ 'default' => 42, 'int' ]`` converts the value to an integer with
- * default 42.
- * - ``[ 'default' => [ 3, 4, 5 ], 'int', 'set' ]`` converts the value to a set
- * of integers. This works because `int` converts an iterable to an
+ * - ``[ 'default' => 42, 'int' ]`` converts the input value to an integer
+ * with default 42.
+ * - ``[ 'default' => [ 3, 4, 5 ], 'int', 'set' ]`` converts the input value
+ *  to a set of integers. This works because `int` converts an iterable to an
  * array of integers, and `set` converts an array to a set. If the value
  * is not given, the default is the set containing the numbers 3, 4 and 5.
  * - ``[ 'enum' => [ 'foo', 'bar', 'baz' ], 'array', 'required' ]`` converts
@@ -50,11 +48,7 @@ use alcamo\exception\{
  */
 class Sanitizer implements SanitizerInterface
 {
-    /**
-     * @brief Map of rule names to filter classes
-     *
-     * This may be modified or extended in derived classes.
-     */
+    /// Map of rule names to classes that implement FilterInterface
     public const FILTER_CLASSES = [
         'alnum'     => AlnumFilter::class,
         'alpha'     => AlphaFilter::class,
@@ -78,9 +72,6 @@ class Sanitizer implements SanitizerInterface
         'uppercase' => UppercaseFilter::class
     ];
 
-    /// Data suitable as input for ruleArrayMap2FilterObjectsMap()
-    public const RULES = [];
-
     /**
      * @brief Throw if the input data is invalid in any way
      *
@@ -89,7 +80,8 @@ class Sanitizer implements SanitizerInterface
      */
     public const THROW_ON_INVALID = 1;
 
-    private $flags_; ///< int
+    /// Data suitable as input for ruleArrayMap2FilterObjectsMap()
+    public const RULES = [];
 
     /// Convert a rule array to an array of FilterInterface objects
     public static function ruleArray2FilterObjects(
@@ -118,6 +110,8 @@ class Sanitizer implements SanitizerInterface
      *
      * @param $ruleArrayMap Map of keys to rule arrays.
      *
+     * @param $flags See __construct().
+     *
      * @return Array suitable as input to __construct().
      */
     public static function ruleArrayMap2FilterObjectsMap(
@@ -137,7 +131,7 @@ class Sanitizer implements SanitizerInterface
     /**
      * @param $ruleArrayMap Map of keys to rule arrays.
      *
-     * $flags See __construct().
+     * @param $flags See __construct().
      */
     public static function newFromRuleArrayMap(
         iterable $ruleArrayMap,
@@ -148,6 +142,8 @@ class Sanitizer implements SanitizerInterface
             static::ruleArrayMap2FilterObjectsMap($ruleArrayMap, $flags)
         );
     }
+
+    private $flags_; ///< int
 
     private $filterObjectsMap_; ///< Map of keys to arrays of FilterInterface
 
@@ -168,7 +164,10 @@ class Sanitizer implements SanitizerInterface
         $this->flags_ = (int)$flags;
 
         $this->filterObjectsMap_ = (array)$filterObjectsMap
-            + static::ruleArrayMap2FilterObjectsMap(static::RULES, $flags);
+            + static::ruleArrayMap2FilterObjectsMap(
+                array_diff_key(static::RULES, (array)$filterObjectsMap),
+                $flags
+            );
     }
 
     public function getFilterObjectsMap(): array
